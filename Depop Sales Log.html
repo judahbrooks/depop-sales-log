@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Depop Sales Log</title>
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--text:#1d1d1f;--muted:#6b6b70;--line:#e2e0da;--accent:#ff2300;--pos:#13803d;--neg:#c62828;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121214;--card:#1c1c1f;--text:#f2f2f3;--muted:#9a9aa1;--line:#2e2e33;--accent:#ff3b1f;--pos:#4cd37f;--neg:#ff7b7b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121214;--card:#1c1c1f;--text:#f2f2f3;--muted:#9a9aa1;--line:#2e2e33;--accent:#ff3b1f;--pos:#4cd37f;--neg:#ff7b7b;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:16px;max-width:760px;margin-inline:auto}
+h1{font-size:1.3rem;margin:4px 0 14px}
+h1 span{color:var(--accent)}
+.bar{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.bar input[type=month]{flex:1;min-width:0}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:9px 13px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+input{font:inherit;color:var(--text);background:transparent;border:0;width:100%;padding:10px 8px;outline:none}
+input[type=month]{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 10px}
+.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);background:var(--bg)}
+td{border-bottom:1px solid var(--line);padding:0}
+td:focus-within{background:var(--bg)}
+td.profit{padding:10px 8px;font-weight:600;font-variant-numeric:tabular-nums}
+td.x{width:40px;text-align:center}
+td.x button{border:0;background:none;color:var(--muted);padding:8px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
+.empty{padding:22px;text-align:center;color:var(--muted)}
+.tot{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:14px 0}
+.tabs{display:flex;gap:6px;margin-bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tabs button{flex:1;border:0;background:none;color:var(--muted);font-weight:600;padding:9px 4px;font-size:.88rem}
+.tabs button.on{background:var(--accent);color:#fff}
+.pane{display:none}.pane.on{display:block}
+.wrap table.sm{min-width:0}
+.tot div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.tot small{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+.tot b{font-size:1.15rem;font-variant-numeric:tabular-nums}
+.note{color:var(--muted);font-size:.8rem;margin-top:10px}
+</style>
+</head>
+<body>
+<h1>Depop <span>Sales Log</span></h1>
+<div class="tabs"><button class="on" data-t="s">Sales</button><button data-t="e">Expenses</button><button data-t="a">Monthly Analysis</button></div>
+<datalist id="bl"><option value="Pre-owned"></datalist>
+<div class="bar" id="monthBar">
+  <button id="prev" aria-label="Previous month">‹</button>
+  <input type="month" id="month">
+  <button id="next" aria-label="Next month">›</button>
+</div>
+
+<div class="tot" id="monthTot">
+  <div><small>Total spent</small><b id="tSpent">$0.00</b></div>
+  <div><small>Total sold</small><b id="tSold">$0.00</b></div>
+  <div><small>Business expenses</small><b id="tExp">$0.00</b></div>
+  <div><small>Net profit</small><b id="tProfit">$0.00</b></div>
+</div>
+
+<div class="pane on" id="paneSales">
+<div class="wrap">
+  <table>
+    <thead><tr><th>Item name / type</th><th>Bought for</th><th>Sold for</th><th>Net profit</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div class="empty" id="empty">No items yet this month. Tap “Add item”.</div>
+</div>
+<div class="bar" style="margin-top:12px"><button class="primary" id="add">+ Add item</button></div>
+</div>
+<div class="pane" id="paneExp">
+<div class="wrap">
+  <table class="sm">
+    <thead><tr><th>Expense (mailers, tape, labels…)</th><th>Amount</th><th></th></tr></thead>
+    <tbody id="expRows"></tbody>
+  </table>
+  <div class="empty" id="expEmpty">No expenses yet this month.</div>
+</div>
+<div class="bar" style="margin-top:12px"><button class="primary" id="addExp">+ Add expense</button></div>
+</div>
+<div class="pane" id="paneAna">
+<div class="tot">
+  <div><small>All-time net profit</small><b id="aNet">$0.00</b></div>
+  <div><small>All-time sold</small><b id="aSold">$0.00</b></div>
+  <div><small>All-time spent</small><b id="aSpent">$0.00</b></div>
+  <div><small>Items sold</small><b id="aCount">0</b></div>
+</div>
+<div class="wrap">
+  <table class="sm" style="min-width:440px">
+    <thead><tr><th>Month</th><th>Items sold</th><th>Spent</th><th>Sold</th><th>Net profit</th></tr></thead>
+    <tbody id="anaRows"></tbody>
+  </table>
+  <div class="empty" id="anaEmpty">No data yet.</div>
+</div>
+</div>
+<p class="note">Item profit = sold for − bought for (type “pre-owned” in Bought for to count it as $0). Total spent = item purchases + business expenses. Net profit = profit on sold items − business expenses. Items with no sale price yet count toward total spent but not profit. Data saves automatically in this browser.</p>
+
+<script>
+const KEY="judahthriftss-sales-v1";
+let data={};
+try{data=JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){data={}}
+const $=id=>document.getElementById(id);
+const monthEl=$("month");
+const now=new Date();
+let cur=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+const money=n=>(n<0?"-":"")+"$"+Math.abs(n).toFixed(2);
+const num=v=>{const n=parseFloat(v);return isNaN(n)?null:n};
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
+function items(){return data[cur]||(data[cur]=[])}
+
+function profitOf(it){const b=num(it.b)||0,s=num(it.s);return s===null?null:s-b}
+function paint(el,p){el.textContent=p===null?"—":money(p);el.className="profit "+(p===null?"":p>=0?"pos":"neg")}
+
+function exps(){return data["exp-"+cur]||(data["exp-"+cur]=[])}
+function totals(){
+  let sp=0,so=0,pr=0;
+  items().forEach(it=>{sp+=num(it.b)||0;const s=num(it.s);if(s!==null){so+=s;pr+=s-(num(it.b)||0)}});
+  const ex=exps().reduce((a,e)=>a+(num(e.a)||0),0);
+  const net=pr-ex;
+  $("tSpent").textContent=money(sp+ex);$("tSold").textContent=money(so);$("tExp").textContent=money(ex);
+  const t=$("tProfit");t.textContent=money(net);t.className=net>=0?"pos":"neg";
+}
+function renderExp(){
+  const tb=$("expRows");tb.innerHTML="";
+  exps().forEach((e,i)=>{
+    const tr=document.createElement("tr");
+    const mk=(field,ph,type)=>{
+      const td=document.createElement("td");const inp=document.createElement("input");
+      inp.placeholder=ph;inp.value=e[field]||"";
+      if(type){inp.type="number";inp.step="0.01";inp.inputMode="decimal";inp.min="0"}
+      inp.addEventListener("input",()=>{e[field]=inp.value;save();totals()});
+      td.appendChild(inp);tr.appendChild(td);
+    };
+    mk("d","e.g. Poly mailers");mk("a","0.00",1);
+    const x=document.createElement("td");x.className="x";
+    const del=document.createElement("button");del.textContent="✕";del.setAttribute("aria-label","Delete expense");
+    del.onclick=()=>{exps().splice(i,1);save();renderExp();totals()};
+    x.appendChild(del);tr.appendChild(x);tb.appendChild(tr);
+  });
+  $("expEmpty").style.display=exps().length?"none":"block";
+}
+
+function render(){
+  monthEl.value=cur;
+  const tb=$("rows");tb.innerHTML="";
+  items().forEach((it,i)=>{
+    const tr=document.createElement("tr");
+    const mk=(field,ph,type)=>{
+      const td=document.createElement("td");const inp=document.createElement("input");
+      inp.placeholder=ph;inp.value=it[field]||"";
+      if(type){inp.type="number";inp.step="0.01";inp.inputMode="decimal";inp.min="0"}
+      inp.addEventListener("input",()=>{it[field]=inp.value;save();paint(pc,profitOf(it));totals()});
+      td.appendChild(inp);tr.appendChild(td);
+    };
+    mk("n","e.g. Vintage Nike tee");mk("b","0.00 or pre-owned");mk("s","0.00",1);
+    tr.children[1].firstChild.setAttribute("list","bl");
+    const pc=document.createElement("td");paint(pc,profitOf(it));tr.appendChild(pc);
+    const x=document.createElement("td");x.className="x";
+    const del=document.createElement("button");del.textContent="✕";del.setAttribute("aria-label","Delete row");
+    del.onclick=()=>{items().splice(i,1);save();render()};
+    x.appendChild(del);tr.appendChild(x);tb.appendChild(tr);
+  });
+  $("empty").style.display=items().length?"none":"block";
+  renderExp();
+  totals();
+}
+
+function shift(d){
+  let [y,m]=cur.split("-").map(Number);m+=d;
+  if(m<1){m=12;y--}if(m>12){m=1;y++}
+  cur=y+"-"+String(m).padStart(2,"0");render();
+}
+$("prev").onclick=()=>shift(-1);
+$("next").onclick=()=>shift(1);
+monthEl.onchange=()=>{if(monthEl.value){cur=monthEl.value;render()}};
+$("add").onclick=()=>{items().push({n:"",b:"",s:""});save();render();
+  const r=$("rows").lastChild;if(r)r.querySelector("input").focus()};
+$("addExp").onclick=()=>{exps().push({d:"",a:""});save();renderExp();
+  const r=$("expRows").lastChild;if(r)r.querySelector("input").focus()};
+function stat(m){
+  const its=data[m]||[],ex=data["exp-"+m]||[];
+  let sp=0,so=0,pr=0,n=0;
+  its.forEach(it=>{sp+=num(it.b)||0;const s=num(it.s);if(s!==null){so+=s;pr+=s-(num(it.b)||0);n++}});
+  const e=ex.reduce((a,x)=>a+(num(x.a)||0),0);
+  return {has:its.length||ex.length,n,sp:sp+e,so,net:pr-e};
+}
+const cls=v=>v>=0?"pos":"neg";
+function renderAna(){
+  const ms=new Set();
+  Object.keys(data).forEach(k=>{const m=k.replace(/^exp-/,"");if(/^\d{4}-\d{2}$/.test(m))ms.add(m)});
+  const T={n:0,sp:0,so:0,net:0};
+  let h="";
+  [...ms].sort().reverse().forEach(m=>{
+    const s=stat(m);if(!s.has)return;
+    T.n+=s.n;T.sp+=s.sp;T.so+=s.so;T.net+=s.net;
+    const [y,mo]=m.split("-").map(Number);
+    const lab=new Date(y,mo-1,1).toLocaleString("en-US",{month:"short",year:"numeric"});
+    h+=`<tr><td class="profit">${lab}</td><td class="profit">${s.n}</td><td class="profit">${money(s.sp)}</td><td class="profit">${money(s.so)}</td><td class="profit ${cls(s.net)}">${money(s.net)}</td></tr>`;
+  });
+  $("anaRows").innerHTML=h;
+  $("anaEmpty").style.display=h?"none":"block";
+  $("aNet").textContent=money(T.net);$("aNet").className=cls(T.net);
+  $("aSold").textContent=money(T.so);$("aSpent").textContent=money(T.sp);$("aCount").textContent=T.n;
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+  const t=b.dataset.t;
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  $("paneSales").classList.toggle("on",t==="s");
+  $("paneExp").classList.toggle("on",t==="e");
+  $("paneAna").classList.toggle("on",t==="a");
+  $("monthBar").style.display=$("monthTot").style.display=t==="a"?"none":"";
+  if(t==="a")renderAna();
+});
+render();
+</script>
+</body>
+</html>
